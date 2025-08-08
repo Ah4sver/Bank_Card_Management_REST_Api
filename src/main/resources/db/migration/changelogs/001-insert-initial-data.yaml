@@ -1,0 +1,32 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-insert-initial-users
+      author: Daniil
+      changes:
+        - insert:
+            tableName: users
+            columns:
+              - column: { name: id, valueComputed: "nextval('users_id_seq')" }
+              - column: { name: username, value: "admin_acc" }
+              - column: { name: password, value: "$2a$10$yiSW6IDm2s3ATP5FYjzCpe5zTPrm1bO8uxOinailJeM/AE.L1ABdC" }
+              - column: { name: first_name, value: "Admin" }
+              - column: { name: last_name, value: "Adminov" }
+        - insert:
+            tableName: user_roles
+            columns:
+              - column: { name: user_id, valueComputed: "currval('users_id_seq')" }
+              - column: { name: role, value: "ADMIN" }
+
+        - insert:
+            tableName: users
+            columns:
+              - column: { name: id, valueComputed: "nextval('users_id_seq')" }
+              - column: { name: username, value: "user001" }
+              - column: { name: password, value: "$2a$10$zZBQUxGToxXmj8vNSdmzEOIO010cu8PG1UeQzLvI3je0ihP8jryJS" }
+              - column: { name: first_name, value: "Ivan" }
+              - column: { name: last_name, value: "Ivanov" }
+        - insert:
+            tableName: user_roles
+            columns:
+              - column: { name: user_id, valueComputed: "currval('users_id_seq')" }
+              - column: { name: role, value: "USER" }

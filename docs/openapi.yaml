@@ -1,0 +1,545 @@
+openapi: 3.1.0
+info:
+  title: Bank Card Management API
+  description: API для управления банковскими картами
+  version: v1
+servers:
+  - url: http://localhost:8080
+    description: Generated server url
+tags:
+  - name: Контроллер банковских карт
+    description: Операции, доступные пользователю для управления своими картами
+  - name: Контроллер Аутентификации
+    description: Операции для регистрации и входа в систему
+  - name: Контроллер администратора
+    description: Операции, доступные только администратору
+paths:
+  /api/cards/transfer:
+    post:
+      tags:
+        - Контроллер банковских карт
+      summary: Перевод средств между своими картами
+      description: Выполняет перевод с одной своей карты на другую
+      operationId: transferMoney
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferRequestDto'
+        required: true
+      responses:
+        '200':
+          description: Перевод выполнен успешно
+        '400':
+          description: Некорректные данные
+      security:
+        - bearerAuth: []
+  /api/auth/register:
+    post:
+      tags:
+        - Контроллер Аутентификации
+      summary: Регистрация нового пользователя
+      description: Создает нового пользователя с ролью USER
+      operationId: registerUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDto'
+        required: true
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+          content:
+            '*/*':
+              schema:
+                type: object
+        '400':
+          description: Ошибка валидации или имя пользователя уже занято
+          content:
+            '*/*':
+              schema:
+                type: object
+  /api/auth/login:
+    post:
+      tags:
+        - Контроллер Аутентификации
+      summary: Вход в систему
+      description: Аутентифицирует пользователя и возвращает JWT токен
+      operationId: authenticateUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+        required: true
+      responses:
+        '200':
+          description: Успешный вход, токен в теле ответа
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/JwtAuthResponseDto'
+        '403':
+          description: Ошибка входа. Неверные учетные данные
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/JwtAuthResponseDto'
+  /api/admin/cards:
+    get:
+      tags:
+        - Контроллер администратора
+      summary: Получить список всех карт
+      description: Возвращает постраничный список всех карт в системе
+      operationId: getAllCards
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 10
+      responses:
+        '200':
+          description: Успешное получение списка карт
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PageCardDto'
+        '403':
+          description: Доступ запрещен
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PageCardDto'
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - Контроллер администратора
+      summary: Создание новой банковской карты
+      description: Создает новую карту для указанного пользователя
+      operationId: createCard
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCardRequestDto'
+        required: true
+      responses:
+        '201':
+          description: Карта успешно создана
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+        '400':
+          description: Ошибка валидации данных
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+        '403':
+          description: Доступ запрещен
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+        '404':
+          description: Пользователь с указанным id не найден
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+      security:
+        - bearerAuth: []
+  /api/cards/{id}/request-block:
+    patch:
+      tags:
+        - Контроллер банковских карт
+      summary: Запросить блокировку своей карты
+      description: >-
+        Устанавливает статус карты на PENDING_BLOCK. Выполнить можно только для
+        своей активной карты
+      operationId: blockMyCard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Запрос на блокировку успешно послан
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+        '403':
+          description: Доступ запрещен
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+        '404':
+          description: Карта не найдена
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+        '500':
+          description: Внутренняя ошибка
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+      security:
+        - bearerAuth: []
+  /api/admin/cards/{id}/block:
+    patch:
+      tags:
+        - Контроллер администратора
+      summary: Заблокировать карту
+      description: Подтверждает блокировку карты, переводит в статус BLOCKED
+      operationId: blockCard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Карта успешно заблокирована
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+        '403':
+          description: Доступ запрещен
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+        '404':
+          description: Карта не найдена
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+        '500':
+          description: Внутренняя ошибка
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+      security:
+        - bearerAuth: []
+  /api/admin/cards/{id}/activate:
+    patch:
+      tags:
+        - Контроллер администратора
+      summary: Активировать карту
+      description: Активирует заблокированную карту, переводит в статус ACTIVE
+      operationId: activateCard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Карта успешно активирована
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+        '403':
+          description: Доступ запрещен
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+        '404':
+          description: Карта не найдена
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+        '500':
+          description: Внутренняя ошибка
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CardDto'
+      security:
+        - bearerAuth: []
+  /api/cards:
+    get:
+      tags:
+        - Контроллер банковских карт
+      summary: Получить список своих карт
+      description: Возвращает постраничный список карт, принадлежащих текущему пользователю
+      operationId: getUserCards
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 10
+      responses:
+        '200':
+          description: Успешное получение списка карт
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PageCardDto'
+        '403':
+          description: Доступ запрещен (неверный токен)
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PageCardDto'
+      security:
+        - bearerAuth: []
+  /api/cards/{id}/balance:
+    get:
+      tags:
+        - Контроллер банковских карт
+      summary: Получить баланс своей карты
+      description: >-
+        Возвращает текущий баланс для указанной карты. Доступно только для своих
+        карт
+      operationId: getBalance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Баланс успешно получен
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BalanceDto'
+        '403':
+          description: Доступ запрещен
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BalanceDto'
+        '404':
+          description: Карта не найдена
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/BalanceDto'
+      security:
+        - bearerAuth: []
+  /api/admin/cards/{id}:
+    delete:
+      tags:
+        - Контроллер администратора
+      summary: Удалить карту
+      description: Удаляет карту из системы
+      operationId: deleteCard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Карта успешно удалена
+        '403':
+          description: Доступ запрещен
+        '404':
+          description: Карта не найдена
+      security:
+        - bearerAuth: []
+components:
+  schemas:
+    TransferRequestDto:
+      type: object
+      properties:
+        fromCardId:
+          type: integer
+          format: int64
+        toCardId:
+          type: integer
+          format: int64
+        amount:
+          type: number
+      required:
+        - amount
+        - fromCardId
+        - toCardId
+    RegisterDto:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          maxLength: 2147483647
+          minLength: 5
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+      required:
+        - firstName
+        - lastName
+        - password
+        - username
+    LoginDto:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+        - password
+        - username
+    JwtAuthResponseDto:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+    CreateCardRequestDto:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        cardNumber:
+          type: string
+          maxLength: 16
+          minLength: 16
+        expiryDate:
+          type: string
+          format: date
+      required:
+        - cardNumber
+        - expiryDate
+        - userId
+    CardDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        maskedCardNumber:
+          type: string
+        expiryDate:
+          type: string
+          format: date
+        status:
+          type: string
+        balance:
+          type: number
+    PageCardDto:
+      type: object
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardDto'
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: '#/components/schemas/SortObject'
+        first:
+          type: boolean
+        last:
+          type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
+        pageable:
+          $ref: '#/components/schemas/PageableObject'
+        empty:
+          type: boolean
+    PageableObject:
+      type: object
+      properties:
+        offset:
+          type: integer
+          format: int64
+        sort:
+          $ref: '#/components/schemas/SortObject'
+        paged:
+          type: boolean
+        pageSize:
+          type: integer
+          format: int32
+        pageNumber:
+          type: integer
+          format: int32
+        unpaged:
+          type: boolean
+    SortObject:
+      type: object
+      properties:
+        empty:
+          type: boolean
+        sorted:
+          type: boolean
+        unsorted:
+          type: boolean
+    BalanceDto:
+      type: object
+      properties:
+        balance:
+          type: number
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
